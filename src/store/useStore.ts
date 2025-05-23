@@ -1,129 +1,58 @@
+
 import { create } from 'zustand';
-import { Contact, Template, Campaign, Message, Category } from '../types';
+
+export interface Contact {
+  name: string;
+  number: string;
+  category: string;
+}
+
+export interface Category {
+  name: string;
+}
 
 interface Store {
   contacts: Contact[];
-  templates: Template[];
-  campaigns: Campaign[];
-  messages: Message[];
   categories: Category[];
-  selectedContact: Contact | null;
-  activeView: 'chat' | 'contacts' | 'calendar' | 'settings';
-  selectedCategory: string | null;
-  addContacts: (contacts: Contact[]) => void;
-  addTemplate: (template: Template) => void;
-  createCampaign: (campaign: Campaign) => void;
-  updateCampaignStatus: (id: string, status: Campaign['status']) => void;
-  setSelectedContact: (contact: Contact) => void;
-  updateMessageStatus: (id: string, status: Message['status']) => void;
-  setActiveView: (view: 'chat' | 'contacts' | 'calendar' | 'settings') => void;
-  addMessage: (message: Message) => void;
+  fetchContacts: () => void;
+  addContact: (contact: Contact) => void;
+  fetchCategories: () => void;
   addCategory: (category: Category) => void;
-  setSelectedCategory: (categoryId: string | null) => void;
-  toggleContactSelection: (contactId: string) => void;
-  selectAllContacts: (selected: boolean, categoryId?: string) => void;
 }
 
 export const useStore = create<Store>((set) => ({
   contacts: [],
-  templates: [],
-  campaigns: [],
-  categories: [
-    { id: '1', name: 'Customers', color: '#4CAF50' },
-    { id: '2', name: 'Leads', color: '#2196F3' },
-    { id: '3', name: 'VIP', color: '#FFC107' },
-  ],
-  messages: [
-    {
-      id: '1',
-      contactId: '1',
-      campaignId: '1',
-      content: 'Hello! How are you?',
-      status: 'read',
-      timestamp: new Date('2024-03-10T10:00:00'),
-    },
-    {
-      id: '2',
-      contactId: '1',
-      campaignId: '1',
-      content: 'I am good, thank you!',
-      status: 'delivered',
-      timestamp: new Date('2024-03-10T10:05:00'),
-    }
-  ],
-  selectedContact: null,
-  activeView: 'chat',
-  selectedCategory: null,
-  
-  addContacts: (newContacts) =>
-    set((state) => ({
-      contacts: [...state.contacts, ...newContacts],
-    })),
-    
-  addTemplate: (template) =>
-    set((state) => ({
-      templates: [...state.templates, template],
-    })),
-    
-  createCampaign: (campaign) =>
-    set((state) => ({
-      campaigns: [...state.campaigns, campaign],
-    })),
-    
-  updateCampaignStatus: (id, status) =>
-    set((state) => ({
-      campaigns: state.campaigns.map((c) =>
-        c.id === id ? { ...c, status } : c
-      ),
-    })),
+  categories: [],
 
-  setSelectedContact: (contact) =>
-    set(() => ({
-      selectedContact: contact,
-    })),
+  fetchContacts: async () => {
+    const res = await fetch('https://marketing-backend-8bd1.onrender.com/contacts');
+    const data = await res.json();
+    set({ contacts: data });
+  },
 
-  updateMessageStatus: (id, status) =>
-    set((state) => ({
-      messages: state.messages.map((m) =>
-        m.id === id ? { ...m, status } : m
-      ),
-    })),
+  addContact: async (contact: Contact) => {
+    const res = await fetch('https://marketing-backend-8bd1.onrender.com/add-contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(contact)
+    });
+    const data = await res.json();
+    set((state) => ({ contacts: [...state.contacts, data] }));
+  },
 
-  setActiveView: (view) =>
-    set(() => ({
-      activeView: view,
-    })),
+  fetchCategories: async () => {
+    const res = await fetch('https://marketing-backend-8bd1.onrender.com/categories');
+    const data = await res.json();
+    set({ categories: data });
+  },
 
-  addMessage: (message) =>
-    set((state) => ({
-      messages: [...state.messages, message],
-    })),
-
-  addCategory: (category) =>
-    set((state) => ({
-      categories: [...state.categories, category],
-    })),
-
-  setSelectedCategory: (categoryId) =>
-    set(() => ({
-      selectedCategory: categoryId,
-    })),
-
-  toggleContactSelection: (contactId) =>
-    set((state) => ({
-      contacts: state.contacts.map((contact) =>
-        contact.id === contactId
-          ? { ...contact, selected: !contact.selected }
-          : contact
-      ),
-    })),
-
-  selectAllContacts: (selected, categoryId) =>
-    set((state) => ({
-      contacts: state.contacts.map((contact) =>
-        (!categoryId || contact.category === categoryId)
-          ? { ...contact, selected }
-          : contact
-      ),
-    })),
+  addCategory: async (category: Category) => {
+    const res = await fetch('https://marketing-backend-8bd1.onrender.com/add-category', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(category)
+    });
+    const data = await res.json();
+    set((state) => ({ categories: [...state.categories, data] }));
+  },
 }));
