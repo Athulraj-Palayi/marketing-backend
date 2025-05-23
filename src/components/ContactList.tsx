@@ -8,7 +8,8 @@ import { format } from 'date-fns';
 const ContactList = () => {
   const {
     contacts,
-    addContacts,
+    addContact,
+    fetchContacts,
     setSelectedContact,
     categories,
     selectedCategory,
@@ -23,6 +24,12 @@ const ContactList = () => {
   const [newCategoryColor, setNewCategoryColor] = React.useState('#4CAF50');
   const [showFilters, setShowFilters] = React.useState(false);
 
+  // ✅ Fetch contacts on first load
+  React.useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  // ✅ Handle Excel file upload and save to MongoDB
   const onDrop = React.useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     const reader = new FileReader();
@@ -34,22 +41,20 @@ const ContactList = () => {
       const jsonData = XLSX.utils.sheet_to_json(firstSheet);
 
       const newContacts = jsonData.map((row: any) => ({
-        id: crypto.randomUUID(),
         name: row.name || '',
-        phone: row.phone || '',
-        category: row.category || null,
-        tags: row.tags ? row.tags.split(',') : [],
-        lastMessage: '',
-        unreadCount: 0,
-        status: 'offline' as const,
-        selected: false,
+        number: row.phone || '',
+        category: row.category || '',
       }));
 
-      addContacts(newContacts);
+      newContacts.forEach((contact) => {
+        addContact(contact);
+      });
+
+      fetchContacts(); // ✅ Refresh list after upload
     };
 
     reader.readAsArrayBuffer(file);
-  }, [addContacts]);
+  }, [addContact, fetchContacts]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
@@ -65,6 +70,7 @@ const ContactList = () => {
     }
   };
 
+  // ✅ Filter contacts by selected category
   const filteredContacts = contacts.filter(
     (contact) => !selectedCategory || contact.category === selectedCategory
   );
@@ -102,7 +108,7 @@ const ContactList = () => {
             >
               <option value="">All Categories</option>
               {categories.map((category) => (
-                <option key={category.id} value={category.id}>
+                <option key={category.id || category.name} value={category.name}>
                   {category.name}
                 </option>
               ))}
@@ -150,58 +156,27 @@ const ContactList = () => {
 
         {filteredContacts.map((contact) => (
           <div
-            key={contact.id}
+            key={contact.id || contact._id}
             className="p-4 border-b hover:bg-gray-50 cursor-pointer"
           >
             <div className="flex items-start gap-3">
               <input
                 type="checkbox"
                 checked={contact.selected}
-                onChange={() => toggleContactSelection(contact.id)}
+                onChange={() => toggleContactSelection(contact.id || contact._id)}
                 className="mt-1"
               />
               <div className="flex-1" onClick={() => setSelectedContact(contact)}>
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="font-medium">{contact.name}</h3>
-                    <p className="text-sm text-gray-600">{contact.phone}</p>
+                    <p className="text-sm text-gray-600">{contact.number}</p>
                   </div>
-                  <div className="flex flex-col items-end">
-                    {contact.lastSeen && (
-                      <span className="text-xs text-gray-500">
-                        {format(contact.lastSeen, 'HH:mm')}
-                      </span>
-                    )}
-                    {contact.unreadCount > 0 && (
-                      <span className="bg-green-500 text-white text-xs rounded-full px-2 py-1 mt-1">
-                        {contact.unreadCount}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  {contact.status === 'online' && (
-                    <Circle className="w-2 h-2 fill-green-500 text-green-500" />
-                  )}
-                  <p className="text-sm text-gray-500 truncate">
-                    {contact.lastMessage}
-                  </p>
                 </div>
                 <div className="flex gap-1 mt-1">
                   {contact.category && (
-                    <span
-                      className="text-xs px-2 py-1 rounded"
-                      style={{
-                        backgroundColor: categories.find(
-                          (c) => c.id === contact.category
-                        )?.color + '20',
-                        color: categories.find((c) => c.id === contact.category)
-                          ?.color,
-                      }}
-                    >
-                      {
-                        categories.find((c) => c.id === contact.category)?.name
-                      }
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                      {contact.category}
                     </span>
                   )}
                   {contact.tags?.map((tag) => (
